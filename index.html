@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<script id="vertex-shader" type="x-shader/x-vertex">
+attribute vec4 vPosition;
+
+uniform mat4 model2world;
+uniform mat4 world2clip;
+
+varying vec4 fPosition;
+
+void
+main()
+{
+    fPosition = vPosition;
+    gl_Position = world2clip * (model2world * vPosition);
+}
+</script>
+
+<script id="fragment-shader" type="x-shader/x-fragment">
+precision mediump float;
+
+uniform mat4 world2model;
+
+uniform vec4 color;
+uniform vec4 normal;
+
+uniform vec4 lightWorld;
+uniform vec4 eyeWorld;
+uniform int shading;
+
+varying vec4 fPosition;
+
+void
+main()
+{
+    vec3 l = normalize((world2model*lightWorld - fPosition).xyz);
+    vec3 v = normalize((world2model*eyeWorld - fPosition).xyz);
+    vec3 n = normalize(normal.xyz);
+
+    vec3 diffuse = (color * dot(n, l)).xyz;
+
+    vec3 r = 2.0 * dot(l, n) * n - l;
+    vec3 specular = 0.5 * vec3(1, 1, 1) * pow(dot(v, r), 100.0);
+      
+    if (dot(n,l) < 0.01) {
+        diffuse = vec3(0.0,0.0,0.0);
+        specular = vec3(0.0,0.0,0.0);
+    }
+
+    vec3 ambient = color.xyz * 0.2;
+
+    // if (shading == 1)
+        gl_FragColor = vec4((diffuse+specular+ambient), 1.0);
+    // else
+        // gl_FragColor = color;
+}
+</script>
+
+<script type="text/javascript" src="Common/webgl-utils.js"></script>
+<script type="text/javascript" src="Common/initShaders.js"></script>
+<script type="text/javascript" src="Common/PVMat.js"></script>
+<script type="text/javascript" src="data.js"></script>
+<script type="text/javascript" src="Shape.js"></script>
+<script type="text/javascript" src="view.js"></script>
+<div>
+zoom <input id="slider" type="range"
+ min="3" max="10" step="0.1" value="10" />
+</div>
+click and drag to rotate
+
+<!-- <div>
+path <input id="path" type="range"
+ min="0" max="5" step="1" value="0" />
+</div> -->
+
+
+</head>
+
+<body>
+<!-- <button id="ZPlus">z + 0.1</button> -->
+<!-- <button id="ZMinus">z - 0.1</button> -->
+<p>
+<canvas id="gl-canvas" width="960" height="540">
+Oops ... your browser doesn't support the HTML5 canvas element
+</canvas>
+</body>
+</html>
