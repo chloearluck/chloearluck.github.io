@@ -52,7 +52,7 @@ main()
     vec3 ambient = color.xyz * 0.2;
 
     // if (shading == 1)
-        gl_FragColor = vec4((diffuse+specular+ambient), 1.0);
+        gl_FragColor = vec4((diffuse+specular+ambient), color.w);
     // else
         // gl_FragColor = color;
 }

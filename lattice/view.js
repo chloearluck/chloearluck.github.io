@@ -3,14 +3,15 @@ var program;
 var shapes = [];
 var world2clip;
 // var lightWorld = new PV(10, 3, 10, true);
-var lightView = new PV(-50, -50, 20, true);
+// var lightView = new PV(-50, -50, 20, true);
+var lightView = new PV(-50, -50, -20, true);
 var lightWorld;
 var eyeWorld;
 var path_index = 0;
 var MAX_STEP_LENGTH = 0.1;
 var startTime;
 var step_time = 100; //milliseconds 
-var robot;
+var robot,lattice, ramp;
 
 window.onload = function init()
 {
@@ -25,9 +26,9 @@ window.onload = function init()
     program = initShaders( gl, "vertex-shader", "fragment-shader" );
     gl.useProgram( program );
 
-    var lattice = new Shape(gl, latticeverts, latticefaces, new PV(0.0, 0.0, 0.0, 1.0));
+    lattice = new Shape(gl, latticeverts, latticefaces, new PV(0.0, 0.0, 0.0, 1.0));
     shapes.push(lattice);
-    var ramp = new Shape(gl, rampverts, rampfaces, new PV(0.5, 0.5, 0.5, 1.0));
+    ramp = new Shape(gl, rampverts, rampfaces, new PV(0.5, 0.5, 0.5, 0.9));
     shapes.push(ramp);
     robot = new Shape(gl, robotverts, robotfaces, new PV(0.3, 0.6, 1.0, 1.0));
     // var robot = new Shape(gl, robotverts, robotfaces, new PV(0.5, 0.5, 1.0, 1.0));
@@ -198,7 +199,6 @@ window.onload = function init()
             return;
         }
 
-        console.log("R: " + R)
 
         view2world = R.times(view2world);
         world2view = world2view.times(R.transpose());
@@ -318,7 +318,10 @@ function render() {
         updateRobotPos();
     }
 
-    gl.enable(gl.DEPTH_TEST)
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthFunc(gl.LEQUAL)
+    gl.enable(gl.BLEND)
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.clearColor( 1.0, 1.0, 1.0, 1.0 );
 
@@ -330,9 +333,14 @@ function render() {
     gl.uniform4fv(lightLoc, lightWorld.flatten());
     gl.uniform4fv(eyeLoc, eyeWorld.flatten());
 
-    for (var i=0; i<shapes.length; i++)
-        shapes[i].render();
-
+    robot.render();
+    lattice.render();
+    
+    var alpha = ramp.color[3];
+    ramp.color[3] = 0.0;
+    ramp.render();
+    ramp.color[3] = alpha;
+    ramp.render();
 
     requestAnimFrame( render )
 }
