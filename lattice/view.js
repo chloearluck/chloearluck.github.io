@@ -154,11 +154,14 @@ window.onload = function init()
         return;
 
       //all in world coordinates
-      v = getArcBallVector(lastx, lasty).unit();
-      w = getArcBallVector(currx, curry).unit();
+      v = getArcBallVector(lastx, lasty);
+      w = getArcBallVector(currx, curry);
 
       if (v == null || w == null)
           return;
+
+      v.unitize();
+      w.unitize();
 
       //find transformation from v to w
       var vx = v.unit();
