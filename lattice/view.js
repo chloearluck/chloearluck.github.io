@@ -2,13 +2,10 @@ var gl;
 var program;
 var shapes = [];
 var world2clip;
-// var lightWorld = new PV(10, 3, 10, true);
-// var lightView = new PV(-50, -50, 20, true);
 var lightView = new PV(-50, -50, -20, true);
 var lightWorld;
 var eyeWorld;
 var path_index = 0;
-var MAX_STEP_LENGTH = 0.1;
 var startTime;
 var step_time = 50; //milliseconds 
 var robot,lattice, ramp;
@@ -16,23 +13,21 @@ var play = 1;
 
 window.onload = function init()
 {
+    //init canvas
     var canvas = document.getElementById( "gl-canvas" );
-    
     gl = WebGLUtils.setupWebGL( canvas );
     if ( !gl ) { alert( "WebGL isn't available" ); }
-
     gl.viewport( 0, 0, canvas.width, canvas.height );
     gl.clearColor( 1.0, 1.0, 1.0, 1.0 );
-    
     program = initShaders( gl, "vertex-shader", "fragment-shader" );
     gl.useProgram( program );
 
+    //init shapes
     lattice = new Shape(gl, latticeverts, latticefaces, new PV(0.0, 0.0, 0.0, 1.0));
-    shapes.push(lattice);
     ramp = new Shape(gl, rampverts, rampfaces, new PV(0.5, 0.5, 0.5, 0.9));
-    shapes.push(ramp);
     robot = new Shape(gl, robotverts, robotfaces, new PV(0.3, 0.6, 1.0, 1.0));
-    // var robot = new Shape(gl, robotverts, robotfaces, new PV(0.5, 0.5, 1.0, 1.0));
+    shapes.push(lattice);
+    shapes.push(ramp);
     shapes.push(robot);
     updateRobotPos();
     smoothPath();
@@ -106,27 +101,6 @@ window.onload = function init()
     setPerspective();
     setZoom();
     updateM2C();
-
-    // document.getElementById("ZPlus").onclick = function () {
-    //     world2view = new Mat.translation(new PV(0,0,0.1,1)).times(world2view);
-    //     view2world = view2world.times(new Mat.translation(new PV(0,0,-0.1,1)));
-    //     updateM2C();
-    // };
-
-    // //set the sliders bounds based on the size of path
-    // document.getElementById("path").value = path_index;
-    // document.getElementById("path").max = path.length-1;
-    // document.getElementById("path").oninput = function(event) {
-    //     console.log("path index: " + parseInt(event.target.value));
-    //     path_index = parseInt(event.target.value);
-    //     updateRobotPos();
-    // };
-
-    // document.getElementById("ZMinus").onclick = function () {
-    //     world2view = new Mat.translation(new PV(0,0,-0.1,1)).times(world2view);
-    //     view2world = view2world.times(new Mat.translation(new PV(0,0,0.1,1)));
-    //     updateM2C();
-    // };
 
     var mouseDown, mouseIsDown;
     canvas.addEventListener("mousedown", function (e) {
@@ -210,57 +184,7 @@ window.onload = function init()
 
         updateM2C();
     });
-
-    window.onkeydown = function( event ) {
-        switch (event.keyCode) {
-        case 37:
-            console.log('left');
-            world2view = new Mat.translation(new PV(0.1,0,0,1)).times(world2view);
-            view2world = view2world.times(new Mat.translation(new PV(-0.1,0,0,1)));
-            updateM2C();
-            break;
-        case 38:
-            console.log('up');
-            world2view = new Mat.translation(new PV(0,-0.1,0,1)).times(world2view);
-            view2world = view2world.times(new Mat.translation(new PV(0,0.1,0,1)));
-            updateM2C();
-            break;
-        case 39:
-            console.log('right');
-            view2world = Mat.translation(new PV(0.1, 0, 0, 1)).times(view2world);
-            world2view = world2view.times(Mat.translation(new PV(-0.1, 0, 0, 1)))
-            updateM2C();
-            break;
-        case 40:
-            console.log('down');
-            world2view = new Mat.translation(new PV(0,0.1,0,1)).times(world2view);
-            view2world = view2world.times(new Mat.translation(new PV(0,-0.1,0,1)));
-            updateM2C();
-            break;
-        }
-        
-        var key = String.fromCharCode(event.keyCode);
-        var rotSign = event.shiftKey ? -1 : 1;
-        console.log("You clicked " + key);
-        switch( key ) {
-        case 'X':
-            shapes[0].object2rotated = Mat.rotation(0, 0.1 * rotSign).times(shapes[0].object2rotated);
-            shapes[0].rotated2object = shapes[0].rotated2object.times(Mat.rotation(0, -0.1 * rotSign));
-            break;
-            
-        case 'Y':
-            shapes[0].object2rotated = Mat.rotation(1, 0.1 * rotSign).times(shapes[0].object2rotated);
-            shapes[0].rotated2object = shapes[0].rotated2object.times(Mat.rotation(1, -0.1 * rotSign));
-            break;
-            
-        case 'Z':
-            shapes[0].object2rotated = Mat.rotation(2, 0.1 * rotSign).times(shapes[0].object2rotated);
-            shapes[0].rotated2object = shapes[0].rotated2object.times(Mat.rotation(2, -0.1 * rotSign));
-            break;
-        }
-        
-        updateM2C();
-    };
+    //------
 
     function smoothPath() {
         // for steps that are larger than the maximum step size, split them up (divide by the smallest integer that makes the steps small enough)
@@ -283,9 +207,6 @@ window.onload = function init()
         }
 
         path = new_path;
-        console.log(path);
-        console.log(new_path);
-
     }
 
     window.onresize = function (event) {
@@ -301,15 +222,10 @@ window.onload = function init()
     render();
 };
 
-
 function updateRobotPos() {
     var pos = path[path_index];
     var r = pos[3];
     var t = new PV(pos[0], pos[1], pos[2], 1.0);
-
-    // console.log("r: " + r);
-    // console.log("t: " + t);
-    // console.log("pos: " + pos);
 
     robot.object2rotated = Mat.rotation(2, r);
     robot.rotated2object = Mat.rotation(2, -r);
