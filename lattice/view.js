@@ -10,8 +10,9 @@ var eyeWorld;
 var path_index = 0;
 var MAX_STEP_LENGTH = 0.1;
 var startTime;
-var step_time = 100; //milliseconds 
+var step_time = 50; //milliseconds 
 var robot,lattice, ramp;
+var play = 1;
 
 window.onload = function init()
 {
@@ -91,11 +92,15 @@ window.onload = function init()
         lightWorld = view2world.times(lightView);
     }
 
-
-    document.getElementById("slider").onchange = function(event) {
+    document.getElementById("slider").oninput = function(event) {
         zoom = parseFloat(event.target.value);
         console.log("zoom " + zoom);
         setZoom();
+    };
+
+    document.getElementById("speed").oninput = function(event) {
+        var speed = parseFloat(event.target.value);
+        step_time = (21-speed)*5;
     };
 
     setPerspective();
@@ -287,6 +292,10 @@ window.onload = function init()
         console.log("resize " + canvas.width + " " + canvas.height);
     }
 
+    document.getElementById("playpause").onclick = function () { 
+        play = (play == 1? 0 : 1); 
+        document.getElementById("playpause").innerText = (play == 1? "Pause" : "Play");
+    }
 
     startTime = new Date();
     render();
@@ -309,10 +318,9 @@ function updateRobotPos() {
     robot.updateModel2World();
 }
 
-
 function render() {
     endTime = new Date();
-    if (endTime - startTime >= step_time) {
+    if (play == 1 && endTime - startTime >= step_time) {
         startTime = endTime;
         path_index = (path_index+1)%path.length;
         updateRobotPos();
