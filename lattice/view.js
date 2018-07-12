@@ -103,86 +103,82 @@ window.onload = function init()
     updateM2C();
 
     var mouseDown, mouseIsDown;
+
+    //-- ARCBALL: click and drag to rotate around the origin of the world
+    function getArcBallVector(x, y) { //defines the sphere in view space, returns vectors in world space
+      //x and y are pixels
+      var fCanvas = new PV(x, y, -1, true);
+      var bCanvas = new PV(x, y, 1, true);
+      var f = view2world.times(proj2view.times(clip2proj.times(canvas2clip.times(fCanvas)))).homogeneous();
+      var b = view2world.times(proj2view.times(clip2proj.times(canvas2clip.times(bCanvas)))).homogeneous();
+
+      //define the sphere (in world coordinates)
+      var center = new PV(0,0,0,true);
+      var front = view2world.times(new PV(0,0,-near,true));
+      var r = front.minus(center).magnitude();
+
+      //find where fb intersects the imaginary sphere
+      var q=f;
+      var v=b.minus(f);
+      //ray: q+s*v for any s in [0,1]
+      var A = v.dot(v);
+      var B = 2*q.minus(center).dot(v);
+      var C = q.minus(center).dot(q.minus(center)) - r^2;
+      // use quadratic formula
+      var inner = B*B - 4*A*C;
+      if (inner > 0) {
+        var s = (-B - Math.sqrt(inner))/2/A;
+        return q.plus(v.times(s)).minus(center);
+      }
+
+      return null; //cursor lies outside of sphere so we don't scroll
+    }
+
+    var lastx, lasty, mouseIsDown = false;
     canvas.addEventListener("mousedown", function (e) {
-        console.log("mouse pressed");
-        clientX = e.clientX;
-        clientY = e.clientY;
-        var cursorX = e.clientX - canvas.offsetLeft;
-        var cursorY = e.clientY - canvas.offsetTop;
-        mouseDown = new PV(cursorX, cursorY, 0, true);
-        mouseIsDown = true;
+      mouseIsDown = true;
+      lastx = e.clientX - canvas.offsetLeft;
+      lasty = e.clientY - canvas.offsetTop;
     });
 
     canvas.addEventListener("mouseup", function (e) {
-        mouseIsDown = false;
+      mouseIsDown = false;
     });
 
     canvas.addEventListener("mousemove", function (e) {
-        if (!mouseIsDown)
-            return;
-        //get previous mouse position in clip coordinates
-        var clipX = mouseDown[0] * 2 / canvas.width - 1;
-        var clipY = -(mouseDown[1] * 2 / canvas.height - 1);
-        var clip1 = new PV(clipX, clipY, 0, true);
+      if (!mouseIsDown)
+          return;
+      var currx = e.clientX - canvas.offsetLeft;
+      var curry = e.clientY - canvas.offsetTop;
+      if (lastx == currx && lasty == curry)
+        return;
 
-        //get current mouse position ins clip coordinates
-        var cursorX = e.clientX - canvas.offsetLeft;
-        var cursorY = e.clientY - canvas.offsetTop;
-        var clipX = cursorX * 2 / canvas.width - 1;
-        var clipY = -(cursorY * 2 / canvas.height - 1);
-        var clip2 = new PV(clipX, clipY, 0, true);
+      //all in world coordinates
+      v = getArcBallVector(lastx, lasty).unit();
+      w = getArcBallVector(currx, curry).unit();
 
-        var diffClip = clip2.minus(clip1);
+      if (v == null || w == null)
+          return;
 
-        var diffWorld = view2world.times(proj2view).times(clip2proj).times(diffClip).homogeneous();
-        var eyeWorld = view2world.times(new PV(0,0,0,true));
+      //find transformation from v to w
+      var vx = v.unit();
+      var vz = v.cross(w).unit();
+      var vy = vz.cross(vx);
+      var wx = w.unit();
+      var wz = vz;
+      var wy = wz.cross(wx);
+      var vMat = new Mat(vx, vy, vz);
+      var wMat = new Mat(wx, wy, wz);
+      var v2w = wMat.times(vMat.transpose());
+      var w2v = vMat.times(wMat.transpose());
 
-        // var axis = eyeWorld.cross(diffWorld);
-        var axis = diffWorld.cross(eyeWorld);
-        var theta = axis.magnitude() * 0.005; //will probably need to scale
-        // console.log(theta)
-        var axis = axis.unit();
+      world2view = world2view.times(v2w);
+      view2world = w2v.times(view2world);
 
-        //rotate about axis
-        var cost = Math.cos(theta);
-        var sint = Math.sin(theta);
-        var ux = axis[0];
-        var uy = axis[1];
-        var uz = axis[2];
+      updateM2C();
 
-        if (cost === undefined || sint === undefined || ux === undefined || uy === undefined || uz === undefined) {
-            console.log("undefined");
-            return;
-        }
-
-        if (isNaN(cost) || isNaN(sint) || isNaN(ux) || isNaN(uy) || isNaN(uz)) {
-            console.log("nan");
-            return;
-        }
-
-        var R = new Mat();
-        R[0][0] = cost + ux*ux*(1-cost);
-        R[0][1] = ux*uy*(1-cost)-uz*sint;
-        R[0][2] = ux*uz*(1-cost)+uy*sint;
-
-        R[1][0] = ux*uy*(1-cost)+uz*sint;
-        R[1][1] = cost + uy*uy*(1-cost);
-        R[1][2] = uy*uz*(1-cost)-ux*sint;
-
-        R[2][0] = uz*ux*(1-cost)-uy*sint;
-        R[2][1] = uz*uy*(1-cost)+ux*sint;
-        R[2][2] = cost + uz*uz*(1-cost);
-
-        if (R === undefined) {
-            console.log("bad rotation");
-            return;
-        }
-
-
-        view2world = R.times(view2world);
-        world2view = world2view.times(R.transpose());
-
-        updateM2C();
+      lastx = currx;
+      lasty = curry;
     });
     //------
 
