@@ -183,23 +183,65 @@ window.onload = function init()
     //------
 
     function smoothPath() {
-        // for steps that are larger than the maximum step size, split them up (divide by the smallest integer that makes the steps small enough)
-        // don't worry about steps that are too small for now, just eliminate jumping
+        step_size = 0.02;
+        n = 2; //number of intermediate frames to insert on angle change
 
-        console.log(path);
+        new_path = [path[0]];
+        acc_dist = 0;
+        index = 1;
+        while (index < path.length-1) {
+          if (path[index][3] != path[index-1][3]) {
+            //new_path.push(path[index]);
 
-        var new_path = [path[0]];
-        for (var i=1; i<path.length; i++) {
-            var v = path[i].minus(path[i-1]);
-            v[3] = 0;
-            var d = v.magnitude();
-            if (d > MAX_STEP_LENGTH) {
-                var k = Math.ceil(d/MAX_STEP_LENGTH); 
-                var inc = d/k;
-                for (var j=1; j<k; j++)
-                    new_path.push(path[i-1].plus(v.times(inc*j)));
+            var amax = Math.max(path[index][3], path[index-1][3]);
+            var amin = Math.min(path[index][3], path[index-1][3]);
+            diff = amax - amin;
+            sign = -1;
+            if ((2*Math.PI - amax + amin) < diff) { //we cross the 2PI boundary
+                diff = (2*Math.PI - amax + amin);
+                sign = 1;
             }
-            new_path.push(path[i]);
+
+            var steps = [];
+            for (var j=1; j<=n; j++)
+                steps.push(new PV(path[index][0], path[index][1], path[index][2], (amax + sign * j * diff/(n+1)) ));
+            if (amax != path[index-1][3])
+                steps = steps.reverse();
+            steps.push(path[index]);
+            new_path = new_path.concat(steps);
+
+            acc_dist = 0;
+            index++;
+            continue;
+          }
+
+          v = path[index].minus(path[index-1]);
+          v[3] = 0;
+          new_dist = v.magnitude();
+          if (acc_dist+new_dist < step_size) {
+            acc_dist = acc_dist + new_dist;
+            index++;
+            continue;
+          }
+
+          //we need to go fraction f of the way from path[index-1] to path[index];
+          var f = (step_size-acc_dist)/new_dist;
+          var p = path[index-1].plus(v.times(f));
+          new_path.push(p);
+
+          //what if there are multiple steps in one iteration? 
+          var rem_dist = new_dist - (step_size-acc_dist);
+          while (rem_dist >= step_size) {
+            //we need to go from position f along v to position f+step_size/new_dist
+            f = f+step_size/new_dist;
+            p = path[index-1].plus(v.times(f));
+            new_path.push(p);
+
+            rem_dist = rem_dist - step_size;
+          }
+          
+          acc_dist = rem_dist;
+          index++;
         }
 
         path = new_path;
