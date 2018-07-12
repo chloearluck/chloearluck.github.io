@@ -135,17 +135,17 @@ window.onload = function init()
     }
 
     var lastx, lasty, mouseIsDown = false;
-    canvas.addEventListener("mousedown", function (e) {
+    function mouseDown (e) {
       mouseIsDown = true;
       lastx = e.clientX - canvas.offsetLeft;
       lasty = e.clientY - canvas.offsetTop;
-    });
+    }
 
-    canvas.addEventListener("mouseup", function (e) {
+    function mouseUp (e) {
       mouseIsDown = false;
-    });
+    }
 
-    canvas.addEventListener("mousemove", function (e) {
+    function mouseMove (e) {
       if (!mouseIsDown)
           return;
       var currx = e.clientX - canvas.offsetLeft;
@@ -182,7 +182,15 @@ window.onload = function init()
 
       lastx = currx;
       lasty = curry;
-    });
+    }
+
+    canvas.addEventListener("mousedown", mouseDown);
+    canvas.addEventListener("mouseup", mouseUp);
+    canvas.addEventListener("mousemove", mouseMove);
+    canvas.addEventListener("touchstart", mouseDown);
+    canvas.addEventListener("touchend", mouseUp);
+    canvas.addEventListener("touchmove", mouseMove);
+
     //------
 
     function smoothPath() {
