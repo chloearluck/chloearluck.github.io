@@ -41,8 +41,9 @@ main()
 
     vec3 diffuse = (color * max(dot(n, l),0.0)).xyz;
 
-    vec3 r = normalize(2.0 * dot(n, l) * n - l);
-    vec3 specular = 0.5 * vec3(1, 1, 1) * pow(max(dot(v, r),0.0), 20.0);
+    // vec3 r = normalize(2.0 * dot(n, l) * n - l);
+    // vec3 specular = 0.5 * vec3(1, 1, 1) * pow(max(dot(v, r),0.0), 20.0);
+    vec3 specular = vec3(0.0, 0.0, 0.0);
 
     vec3 ambient = color.xyz * 0.2;
 
