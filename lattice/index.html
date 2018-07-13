@@ -39,15 +39,10 @@ main()
     vec3 v = normalize((world2model*eyeWorld - fPosition).xyz);
     vec3 n = normalize(normal.xyz);
 
-    vec3 diffuse = (color * dot(n, l)).xyz;
+    vec3 diffuse = (color * max(dot(n, l),0.0)).xyz;
 
-    vec3 r = 2.0 * dot(l, n) * n - l;
-    vec3 specular = 0.5 * vec3(1, 1, 1) * pow(dot(v, r), 100.0);
-      
-    if (dot(n,l) < 0.01) {
-        diffuse = vec3(0.0,0.0,0.0);
-        specular = vec3(0.0,0.0,0.0);
-    }
+    vec3 r = normalize(2.0 * dot(n, l) * n - l);
+    vec3 specular = 0.5 * vec3(1, 1, 1) * pow(max(dot(v, r),0.0), 20.0);
 
     vec3 ambient = color.xyz * 0.2;
 
