@@ -187,9 +187,9 @@ window.onload = function init()
     canvas.addEventListener("mousedown", mouseDown);
     canvas.addEventListener("mouseup", mouseUp);
     canvas.addEventListener("mousemove", mouseMove);
-    canvas.addEventListener("touchstart", mouseDown);
-    canvas.addEventListener("touchend", mouseUp);
-    canvas.addEventListener("touchmove", mouseMove);
+    // canvas.addEventListener("touchstart", mouseDown);
+    // canvas.addEventListener("touchend", mouseUp);
+    // canvas.addEventListener("touchmove", mouseMove);
 
     //------
 
