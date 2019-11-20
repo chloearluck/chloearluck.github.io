@@ -1,3 +1,11 @@
+//to do:
+//-maybe: add at 2D view
+//-maybe: scroll to zoom
+//-maybe: mobile friendly click and drag
+
+//-test on linux and windows
+//-upload to lee (once lee is back on line)
+
 var gl;
 var program;
 var shapes = [];
@@ -7,7 +15,7 @@ var lightWorld;
 var eyeWorld;
 var path_index = 0;
 var startTime;
-var step_time = 50; //milliseconds 
+var step_time = 15; //milliseconds 
 var robot,lattice, ramp;
 var play = 1;
 
