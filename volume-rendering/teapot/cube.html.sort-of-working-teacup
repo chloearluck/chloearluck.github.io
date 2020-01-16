@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+          <!-- for testing textures (view the texture by 'hanging a banner' across the clip box) -->
+          <script id="test-vertex" type="x-shader/x-vertex">
+          attribute vec4 vPosition;
+          varying vec4 fPosition;
+
+          void main()
+          {
+              gl_Position = vPosition;
+              fPosition = vPosition;
+          }
+          </script>
+
+          <script id="test-fragment" type="x-shader/x-fragment">
+          precision mediump float;
+          varying vec4 fPosition;
+          uniform sampler2D tex; 
+
+
+          // vec4 transfer(vec4 rgba) {
+          //   //assume r = g = b= a
+          //   //this should eventually be a texture, for computation time
+          //   // vec4 res = rgba.r*vec4(1.0,0.0,0.0,1.0) + (1.0-rgba.r)*vec4(0.0,0.0,1.0,1.0);
+          //   // if (rgba.r < 0.1)
+          //   //   res[3] = 0.0;
+          //   // else 
+          //   //   res[3] = 1.0;
+
+          //   return vec4(rgba.xyz,1);
+          // }
+
+          vec4 sampleAs3DTexture(vec3 texCoord) {
+            if (texCoord.z > 1.0 || texCoord.z <0.0)
+              return vec4(0.0, 0.0, 0.0, 1.0);
+
+            float v_slices = 16.0; //pass from view to shader
+            float h_slices = 16.0;
+
+            float n = v_slices * h_slices -1.0;
+         
+            //previous slice
+            float zSliceNumber1 = floor(texCoord.z * n);
+            //next slice (for trilinear interpolation)
+            float zSliceNumber2 = min(zSliceNumber1+1.0, n);
+
+            float row1 = floor(zSliceNumber1/h_slices);
+            float row2 = floor(zSliceNumber2/h_slices);
+            float col1 = zSliceNumber1 - row1*h_slices;
+            float col2 = zSliceNumber2 - row2*h_slices;
+
+
+            float x1 = (col1+texCoord.x)/h_slices;
+            float x2 = (col2+texCoord.x)/h_slices;
+            float y1 = (row1+1.0-texCoord.y)/v_slices;
+            float y2 = (row2+1.0-texCoord.y)/v_slices;
+
+            vec2 texCoordSlice1 = vec2(x1, y1);
+            vec2 texCoordSlice2 = vec2(x2, y2);
+            
+            //for now ignore the transfer function
+            vec4 colorSlice1 = texture2D( tex, texCoordSlice1 );
+            vec4 colorSlice2 = texture2D( tex, texCoordSlice2 );
+            colorSlice1.a =1.0;
+            colorSlice2.a =1.0;
+
+            float zDifference = mod(texCoord.z * n, 1.0);
+
+            return mix(colorSlice1, colorSlice2, zDifference) ;
+        }
+
+
+          //r=g=b=a in range 0 to 0.45
+          void main() {
+            // vec2 texcoords = (fPosition.xy + 1.0) / 2.0;
+            // texcoords = vec2(texcoords[0], 1.0-texcoords[1]);
+            // gl_FragColor = (texture2D(tex, texcoords))*2.0; //teapot in range 0 to 0.
+            // gl_FragColor.a = 1.0;
+            vec3 texCoord = (fPosition.xyz+1.0)/2.0;
+            // gl_FragColor = 10.0*sampleAs3DTexture(texCoord) + vec4(0.2, 0.2, 0.2, 0);
+            gl_FragColor = sampleAs3DTexture(texCoord);
+          }
+          </script>
+
+<!--  -->
+<!--  -->
+<!--  -->
+<!--  -->
+<!--  -->
+<!--  -->
+<!--  -->
+<!--  -->
+<!--  -->
+<!--  -->
+<!--  -->
+<!--  -->
+<!--  -->
+<script id="vertex-shader" type="x-shader/x-vertex">
+attribute vec4 vPosition;
+
+uniform mat4 model2clip;
+uniform mat4 model2world;
+
+varying vec4 fPosition;
+varying vec3 worldSpaceCoords;
+
+void main()
+{
+    gl_Position = model2clip * vPosition;
+    gl_Position = gl_Position /  gl_Position.w;
+    fPosition = model2clip * vPosition;
+    fPosition = fPosition / fPosition.w;
+    worldSpaceCoords = (model2world * vPosition).xyz + vec3(0.5, 0.5, 0.5);
+}
+</script>
+<!--  -->
+<!--  -->
+<!--  -->
+<!--  -->
+<!--  -->
+<!--  -->
+<!--  -->
+<!--  -->
+<!--  -->
+<!--  -->
+<!--  -->
+<!--  -->
+
+<!-- MAIN FRAGMENT SHADER -->
+<script id="fragment-shader" type="x-shader/x-fragment">
+precision mediump float;
+
+uniform vec4 color;
+uniform sampler2D backTex; //world coordinates of back faces
+uniform sampler2D cubeTex; //voxel_grid
+
+const int MAX_STEPS = 256;
+//TODO: make configurable
+float alphaCorrection = .01;
+float steps = 256.0; 
+
+
+varying vec4 fPosition;
+varying vec3 worldSpaceCoords;
+
+  vec4 sampleAs3DTexture(vec3 texCoord) {
+    if (texCoord.z > 1.0 || texCoord.z <0.0)
+      return vec4(0.0, 0.0, 0.0, 1.0);
+
+    float v_slices = 16.0; //pass from view to shader
+    float h_slices = 16.0;
+
+    float n = v_slices * h_slices -1.0;
+ 
+    float zSliceNumber1 = floor(texCoord.z * n);
+    float zSliceNumber2 = min(zSliceNumber1+1.0, n);
+
+    float row1 = floor(zSliceNumber1/h_slices);
+    float row2 = floor(zSliceNumber2/h_slices);
+    float col1 = zSliceNumber1 - row1*h_slices;
+    float col2 = zSliceNumber2 - row2*h_slices;
+
+    float x1 = (col1+texCoord.x)/h_slices;
+    float x2 = (col2+texCoord.x)/h_slices;
+    float y1 = (row1+1.0-texCoord.y)/v_slices;
+    float y2 = (row2+1.0-texCoord.y)/v_slices;
+
+    vec2 texCoordSlice1 = vec2(x1, y1);
+    vec2 texCoordSlice2 = vec2(x2, y2);
+    
+    vec4 colorSlice1 = texture2D( cubeTex, texCoordSlice1 );
+    vec4 colorSlice2 = texture2D( cubeTex, texCoordSlice2 );
+    colorSlice1.a =1.0;
+    colorSlice2.a =1.0;
+
+    float zDifference = mod(texCoord.z * n, 1.0);
+
+    return mix(colorSlice1, colorSlice2, zDifference) ;
+}
+
+void main() {
+  vec2 backtexcoords = (fPosition.xy + 1.0) / 2.0;
+
+  vec3 back = texture2D(backTex, backtexcoords).xyz; //world pos of back, in range [0,1]^3
+  vec3 front = worldSpaceCoords; //world pos of front, in range [0,1]^3
+  
+  vec3 dir = back - front;
+  float rayLength = length(dir);
+  float delta = 1.0/steps;
+  vec3 r = normalize(dir) * delta;
+  vec3 curr = front;
+  vec4 accColor = vec4(0.0);
+  float accAlpha = 0.0;
+  float accLength = 0.0;
+  vec4 colorSample;
+  float alphaSample;
+
+  //If we have twice as many samples, we only need ~1/2 the alpha per sample.
+  //Scaling by 256/10 just happens to give a good value for the alphaCorrection slider.
+  float alphaScaleFactor = 25.6 * delta;
+
+
+  
+  for (int i=0; i<MAX_STEPS; i++) {
+    colorSample = sampleAs3DTexture(curr);
+    colorSample.a = colorSample.r;
+    colorSample.a = 1.0;
+    alphaSample = colorSample.a * alphaCorrection;
+    alphaSample *= (1.0 - accAlpha );
+    
+    accColor += (1.0 - accAlpha) * colorSample * alphaSample;
+    accAlpha += alphaSample;
+
+    curr += r;
+    accLength += delta;
+
+    if (accLength >=rayLength || accAlpha >= 1.0)
+      break;
+  }
+
+  // gl_FragColor = vec4(front, 1.0);
+  gl_FragColor = accColor;
+}
+</script>
+
+
+<!--  -->
+<!--  -->
+<!--  -->
+<!--  -->
+<!--  -->
+<!--  -->
+<!--  -->
+<!--  -->
+<!--  -->
+<!--  -->
+<!--  -->
+<!--  -->
+<!--  -->
+<script id="texture-vertex-shader" type="x-shader/x-vertex">
+attribute vec4 vPosition;
+
+uniform mat4 model2clip;
+uniform mat4 model2world;
+
+varying vec3 worldSpaceCoords;
+
+void main()
+{
+    worldSpaceCoords = (model2world * vPosition).xyz + vec3(0.5, 0.5, 0.5);
+    gl_Position = model2clip * vPosition;
+}
+</script>
+
+<script id="texture-fragment-shader" type="x-shader/x-fragment">
+precision mediump float;
+
+uniform vec4 color;
+varying vec3 worldSpaceCoords;
+
+void main() {
+  gl_FragColor  = vec4( worldSpaceCoords.x , worldSpaceCoords.y, worldSpaceCoords.z, 1 );
+}
+</script>
+
+<script type="text/javascript" src="../Common/webgl-utils.js"></script>
+<script type="text/javascript" src="../Common/initShaders.js"></script>
+<script type="text/javascript" src="../Common/PVMat.js"></script>
+<script type="text/javascript" src="../Common/Texture2D.js"></script>
+<script type="text/javascript" src="cube.js"></script>
+<script type="text/javascript" src="view.js"></script>
+<div>
+zoom 1x <input id="slider" type="range"
+ min="100" max="1000" step="10" value="100" />
+ 10x
+</div>
+
+</head>
+
+<body>
+<button id="MyButton">My Button</button>
+<button id="lookAt">Look At</button>
+<button id="ZPlus">z + 0.1</button>
+<button id="ZMinus">z - 0.1</button>
+<p>
+<canvas id="gl-canvas" width="860" height="640">
+Oops ... your browser doesn't support the HTML5 canvas element
+</canvas>
+</body>
+</html>
