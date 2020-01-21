@@ -1,0 +1,14 @@
+todo:
+[ ] - debug: sometimes when I switch voxel grids the voxel fails to load
+        maybe I can load all three and just switch back and forth?
+[x] - debug: theres sometimes a dark spot in the teapot
+        The problem was that MAX_STEPS was too small
+[ ] - remove buttons that are only needed for debugging
+[ ] - add demo to github.io
+[ ] - add README.md 
+[ ] - play around with mouseMove to see if I can get it to behave intuitively when zoom != 1
+
+
+notes to self:
+I've replaced setPerspective() with a new method that takes near, far, and fov
+The severity(wc) to the perspective is determined by fov (field of view, in radians). near and far just determine the planes. This new perspective matrix also includes the zoom and aspect so proj2clip is now unnecessary.
